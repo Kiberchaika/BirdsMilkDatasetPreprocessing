@@ -1,0 +1,19 @@
+torch>=2.0.0
+torchaudio>=2.0.0
+numpy>=1.20.0
+librosa>=0.10.0
+soundfile>=0.12.0
+tqdm>=4.65.0
+PyYAML>=6.0
+beartype>=0.15.0
+einops>=0.6.1
+rotary-embedding-torch>=0.2.7
+hyper-connections
+ml-collections
+omegaconf
+psutil
+flash-attn --no-build-isolation
+onnxruntime-gpu>=1.15.0  # For CUDA support
+# If CUDA is not available, use: onnxruntime>=1.15.0
+blackbird-dataset>=0.1.0
+ffmpeg-python>=0.2.0
