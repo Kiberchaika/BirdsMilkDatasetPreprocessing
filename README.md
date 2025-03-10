@@ -1,46 +1,36 @@
-# Birds Milk Dataset Preprocessing
+# Предобработка Датасета Birds Milk
 
-A comprehensive toolkit for preprocessing audio datasets.
+Набор скриптов для предобработки аудио датасета.
 
-## Features
+## Структура проекта
 
-- Audio format conversion (MP3 to Opus)
-- Vocal separation and dereverberation from music tracks
-- Integration with the Blackbird Dataset
+- `audio_separator.py` - Основной функционал для разделения и обработки аудио
+- `task_convert_opus.py` - Обработка конвертации аудио в формат Opus
+- `task_separate.py` и `task_separate2.py` - Реализации задачи разделения аудио
 
-## Project Structure
+## Использование
 
-- `audio_separator.py` - Core functionality for audio separation and processing
-- `task_convert_opus.py` - Handles audio format conversion to Opus
-- `task_separate.py` and `task_separate2.py` - Audio separation task implementations
-- `input/` - Directory for input audio files
-- `ckpts/` - Directory for model checkpoints
-- `The_Blackbird_Dataset/` - Submodule containing the Blackbird dataset
-- `Music-Source-Separation-Training/` - Submodule for music source separation models
-
-## Usage
-
-### Converting Audio to Opus Format
+### Конвертация аудио в формат Opus
 
 ```python
 python task_convert_opus.py
 ```
 
-This script will:
-- Process audio files from the Blackbird dataset
-- Convert them to Opus format with optimized settings
-- Preserve metadata during conversion
+Этот скрипт:
+- Обрабатывает аудиофайлы из датасета Blackbird
+- Конвертирует их в формат Opus с оптимизированными настройками
+- Сохраняет метаданные при конвертации
 
-### Separating Vocals
+### Отделение вокала
 
 ```python
 python task_separate.py
 ```
 
-Features:
-- Extracts vocals and dereverb from music tracks
+Возможности:
+- Извлекает вокал и убирает реверберацию из музыкальных треков
 
-## Links
+## Ссылки
 
-- [The Blackbird Dataset](https://github.com/Kiberchaika/The_Blackbird_Dataset)
-- [Music Source Separation Training](https://github.com/jarredou/Music-Source-Separation-Training) 
+- [Датасет Blackbird](https://github.com/Kiberchaika/The_Blackbird_Dataset)
+- [Обучение разделения музыкальных источников](https://github.com/jarredou/Music-Source-Separation-Training) 
