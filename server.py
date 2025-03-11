@@ -73,17 +73,21 @@ def initialize_dataset() -> None:
             if not album_tracks:
                 continue
             
-            album_name = os.path.basename(album_path)
-            composition = {
-                "id": len(compositions_list) + 1,
-                "title": album_name,
-                "tracks": []
-            }
-            
             # Process first track from album
             track_path = album_tracks[0]
             track_dir = os.path.dirname(track_path)
             track_base = os.path.basename(track_path)
+            
+            # Extract group name and track name
+            group_name = os.path.basename(os.path.dirname(album_path))
+            track_name = track_base
+            composition_title = f"{group_name} - {track_name}"
+            
+            composition = {
+                "id": len(compositions_list) + 1,
+                "title": composition_title,
+                "tracks": []
+            }
             
             main_track_path = os.path.join(dataset_path, track_dir, track_base + ".opus")
             vocal1_path = os.path.join(dataset_path, track_dir, track_base + "_vocal1.mp3")
