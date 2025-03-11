@@ -21,11 +21,25 @@ CORS(app)
 # Global variables
 dataset = None
 compositions = []
-HOST = socket.gethostbyname(socket.gethostname())
+HOST = '0.0.0.0'  # This will allow external connections
 PORT = 7779
 
+@app.route('/')
+def index():
+    return "Server is running! 🚀"
+
 def get_server_url():
-    return f"http://{HOST}:{PORT}"
+    # Get the actual network IP address
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # Doesn't need to be reachable
+        s.connect(('10.255.255.255', 1))
+        actual_ip = s.getsockname()[0]
+    except Exception:
+        actual_ip = '127.0.0.1'
+    finally:
+        s.close()
+    return f"http://{actual_ip}:{PORT}"
 
 def initialize_dataset() -> None:
     """Initialize the blackbird dataset and scan for compositions."""
@@ -119,9 +133,6 @@ def initialize_dataset() -> None:
     except Exception as error:
         logger.error(f'Error initializing dataset: {str(error)}')
         compositions = []
-
-# Initialize dataset on startup
-initialize_dataset()
 
 @app.route('/api/compositions')
 def get_compositions():
@@ -232,4 +243,9 @@ def rescan():
         }), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=PORT, debug=True) 
+    # Initialize the dataset before starting the server
+    initialize_dataset()
+    # Start the server with threaded=True for better performance
+    print(f"Starting server on http://{HOST}:{PORT}")
+    print(f"You can access the server at http://localhost:{PORT} or http://<your-ip-address>:{PORT}")
+    app.run(host=HOST, port=PORT, debug=True, threaded=True) 
