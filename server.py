@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, send_from_directory, request
+from flask import Flask, jsonify, send_from_directory, request, Response, send_file
 from flask_cors import CORS
 import os
 import json
@@ -9,6 +9,7 @@ from blackbird.dataset import Dataset
 from tqdm import tqdm
 import math
 import socket
+import mimetypes
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -159,7 +160,63 @@ def get_composition(composition_id):
 @app.route('/audio/<path:filename>')
 def serve_audio(filename):
     dataset_path = Path("/media/k4_nas/disk1/Datasets/Music/FUNK")
-    return send_from_directory(str(dataset_path), filename)
+    file_path = os.path.join(dataset_path, filename)
+    
+    if not os.path.exists(file_path):
+        logger.error(f"Audio file not found: {file_path}")
+        return jsonify({"error": "File not found"}), 404
+    
+    # Get file size and mime type
+    file_size = os.path.getsize(file_path)
+    mime_type = mimetypes.guess_type(file_path)[0] or 'application/octet-stream'
+    
+    # Handle range request
+    range_header = request.headers.get('Range')
+    
+    if range_header:
+        try:
+            ranges = range_header.replace('bytes=', '').split('-')
+            start = int(ranges[0]) if ranges[0] else 0
+            end = int(ranges[1]) if ranges[1] else file_size - 1
+            
+            # Ensure valid range
+            if start >= file_size:
+                return jsonify({"error": "Invalid range"}), 416
+            
+            chunk_size = end - start + 1
+            
+            # Create response with partial content
+            response = send_file(
+                file_path,
+                mimetype=mime_type,
+                as_attachment=False,
+                conditional=True
+            )
+            
+            response.headers['Content-Range'] = f'bytes {start}-{end}/{file_size}'
+            response.headers['Accept-Ranges'] = 'bytes'
+            response.headers['Content-Length'] = str(chunk_size)
+            response.status_code = 206
+            
+            return response
+            
+        except (ValueError, IndexError) as e:
+            logger.error(f"Invalid range request: {str(e)}")
+            return jsonify({"error": "Invalid range"}), 416
+    
+    # No range request, serve entire file
+    response = send_file(
+        file_path,
+        mimetype=mime_type,
+        as_attachment=False,
+        conditional=True
+    )
+    
+    response.headers['Accept-Ranges'] = 'bytes'
+    response.headers['Content-Length'] = str(file_size)
+    
+    return response
+    
 
 @app.route('/api/rescan', methods=['POST'])
 def rescan():
@@ -170,7 +227,9 @@ def rescan():
             "count": len(compositions)
         })
     except Exception as error:
-        return jsonify({"error": f"Failed to rescan dataset: {str(error)}"}), 500
+        return jsonify({
+            "error": f"Failed to rescan dataset: {str(error)}"
+        }), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=PORT) 
+    app.run(host='0.0.0.0', port=PORT, debug=True) 
