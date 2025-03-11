@@ -22,7 +22,7 @@ CORS(app)
 dataset = None
 compositions = []
 HOST = socket.gethostbyname(socket.gethostname())
-PORT = 3000
+PORT = 7779
 
 def get_server_url():
     return f"http://{HOST}:{PORT}"
