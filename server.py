@@ -8,6 +8,7 @@ from pathlib import Path
 from blackbird.dataset import Dataset
 from tqdm import tqdm
 import math
+import socket
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -19,6 +20,11 @@ CORS(app)
 # Global variables
 dataset = None
 compositions = []
+HOST = socket.gethostbyname(socket.gethostname())
+PORT = 3000
+
+def get_server_url():
+    return f"http://{HOST}:{PORT}"
 
 def initialize_dataset() -> None:
     """Initialize the blackbird dataset and scan for compositions."""
@@ -75,31 +81,31 @@ def initialize_dataset() -> None:
                     {
                         "title": "Main Track",
                         "type": "main",
-                        "url": f"http://localhost:3000/audio/{os.path.relpath(main_track_path, dataset_path)}",
+                        "url": f"{get_server_url()}/audio/{os.path.relpath(main_track_path, dataset_path)}",
                         "markers": []
                     },
                     {
                         "title": "Vocal 1",
                         "type": "vocal1",
-                        "url": f"http://localhost:3000/audio/{os.path.relpath(vocal1_path, dataset_path)}",
+                        "url": f"{get_server_url()}/audio/{os.path.relpath(vocal1_path, dataset_path)}",
                         "markers": []
                     },
                     {
                         "title": "Vocal 2",
                         "type": "vocal2",
-                        "url": f"http://localhost:3000/audio/{os.path.relpath(vocal2_path, dataset_path)}",
+                        "url": f"{get_server_url()}/audio/{os.path.relpath(vocal2_path, dataset_path)}",
                         "markers": []
                     },
                     {
                         "title": "Vocal 1 (Dereverb)",
                         "type": "vocal1_dereverb",
-                        "url": f"http://localhost:3000/audio/{os.path.relpath(vocal1_dereverb_path, dataset_path)}",
+                        "url": f"{get_server_url()}/audio/{os.path.relpath(vocal1_dereverb_path, dataset_path)}",
                         "markers": []
                     },
                     {
                         "title": "Vocal 2 (Dereverb)",
                         "type": "vocal2_dereverb",
-                        "url": f"http://localhost:3000/audio/{os.path.relpath(vocal2_dereverb_path, dataset_path)}",
+                        "url": f"{get_server_url()}/audio/{os.path.relpath(vocal2_dereverb_path, dataset_path)}",
                         "markers": []
                     }
                 ]
@@ -107,6 +113,7 @@ def initialize_dataset() -> None:
         
         compositions = compositions_list
         logger.info(f"Successfully loaded {len(compositions)} compositions")
+        logger.info(f"Server running at {get_server_url()}")
         
     except Exception as error:
         logger.error(f'Error initializing dataset: {str(error)}')
@@ -166,4 +173,4 @@ def rescan():
         return jsonify({"error": f"Failed to rescan dataset: {str(error)}"}), 500
 
 if __name__ == '__main__':
-    app.run(port=3000) 
+    app.run(host='0.0.0.0', port=PORT) 
