@@ -10,7 +10,7 @@ from typing import Dict, Any
 from audio_separator import setup_models, process_single_file
 
 # Set CUDA to only use GPU 0
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -126,6 +126,7 @@ def main():
 
     # Initialize models
     logger.info("\nInitializing models...")
+    '''
     setup_models({
         'vocal': {
             'config_url': 'https://raw.githubusercontent.com/ZFTurbo/Music-Source-Separation-Training/refs/heads/main/configs/KimberleyJensen/config_vocals_mel_band_roformer_kj.yaml',
@@ -136,6 +137,19 @@ def main():
             'config_url': '/home/k4/Python/Music-Source-Separation-Training/dereverb_mel_band_roformer_anvuew.yaml',
             'ckpt_url': '/home/k4/Python/Music-Source-Separation-Training/dereverb_mel_band_roformer_anvuew_sdr_19.1729.ckpt',
             'model_type': 'mel_band_roformer'
+        }
+    })
+    '''
+    setup_models({
+        'vocal': {
+            'config_url': 'https://huggingface.co/pcunwa/Kim-Mel-Band-Roformer-FT/resolve/main/config_kimmel_unwa_ft.yaml',
+            'ckpt_url': 'https://huggingface.co/pcunwa/Kim-Mel-Band-Roformer-FT/resolve/main/kimmel_unwa_ft.ckpt',
+            'model_type': 'mel_band_roformer'
+        },
+        'dereverb': {
+            'config_url': 'https://huggingface.co/jarredou/aufr33_jarredou_MDXv3_DeReverb/resolve/main/config_dereverb_mdx23c.yaml',
+            'ckpt_url': 'https://huggingface.co/jarredou/aufr33_jarredou_MDXv3_DeReverb/resolve/main/dereverb_mdx23c_sdr_6.9096.ckpt',
+            'model_type': 'mdx23c'
         }
     })
 
@@ -156,42 +170,52 @@ def main():
         if not album_tracks:
             continue
             
-        track_path = album_tracks[0]  # Get first track
-        logger.info(f"\nProcessing first track from album: {album_path}")
-        logger.info(f"Track: {track_path}")
+        logger.info(f"\nProcessing album: {album_path}")
         
-        try:
-            # Get the base directory and filename
-            track_dir = os.path.dirname(track_path)
-            track_base = os.path.basename(track_path)
+        # Process all tracks in the album
+        for track_path in album_tracks:
+            logger.info(f"Processing track: {track_path}")
             
-            # Construct the source file path
-            source_file = os.path.join(dataset_path, track_dir, track_base + ".mp3")
-            
-            # Verify the file exists
-            if not os.path.exists(source_file):
-                logger.warning(f"Source file not found: {source_file}")
-                # Try to find the actual file in the directory
+            try:
+                # Get the base directory and filename
+                track_dir = os.path.dirname(track_path)
+                track_base = os.path.basename(track_path)
+                
+                # Define output paths
                 dir_path = os.path.join(dataset_path, track_dir)
-                if os.path.exists(dir_path):
-                    mp3_files = [f for f in os.listdir(dir_path) if f.endswith('.mp3')]
-                    if mp3_files:
-                        # Find the most similar filename
-                        logger.info(f"Found {len(mp3_files)} MP3 files in directory")
-                        # Use the first MP3 file as a fallback
-                        source_file = os.path.join(dir_path, mp3_files[0])
-                        logger.info(f"Using alternative file: {source_file}")
-                else:
-                    logger.error(f"Directory not found: {dir_path}")
+                vocal_output = os.path.join(dir_path, os.path.splitext(track_base)[0] + "_vocal.opus")
+                dereverb_output = os.path.join(dir_path, os.path.splitext(track_base)[0] + "_vocal_dereverb.opus")
+                
+                # If both files exist, skip processing this track
+                if os.path.exists(vocal_output) and os.path.exists(dereverb_output):
+                    logger.info(f"Vocal and dereverb files already exist for {track_base}, skipping...")
                     continue
-            
-            # Process the track
-            logger.info(f"Processing file: {source_file}")
-            process_single_file(source_file, "vocal1", "vocal1_dereverb")
-            
-        except Exception as e:
-            logger.error(f"Error processing track {track_path}: {str(e)}")
-            continue
+                
+                # Construct the source file path
+                source_file = os.path.join(dataset_path, track_dir, track_base + ".opus")
+                
+                # Verify the file exists
+                if not os.path.exists(source_file):
+                    # Try to find the actual file in the directory
+                    if os.path.exists(dir_path):
+                        opus_files = [f for f in os.listdir(dir_path) if f.endswith('.opus')]
+                        if opus_files:
+                            # Find the most similar filename
+                            logger.info(f"Found {len(opus_files)} opus files in directory")
+                            # Use the first opus file as a fallback
+                            source_file = os.path.join(dir_path, opus_files[0])
+                            logger.info(f"Using alternative file: {source_file}")
+                    else:
+                        logger.error(f"Directory not found: {dir_path}")
+                        continue
+                
+                # Process the track
+                logger.info(f"Processing file: {source_file}")
+                process_single_file(source_file, vocal_output=vocal_output, dereverb_output=dereverb_output)
+                
+            except Exception as e:
+                logger.error(f"Error processing track {track_path}: {str(e)}")
+                continue
 
     logger.info("\nProcessing completed!")
 

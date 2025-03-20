@@ -38,6 +38,7 @@ def preprocess_convert_to_opus(track_info: Dict[str, Any]) -> None:
     
     try:
         # Use ffmpeg to convert to opus format with optimized settings
+        # The Opus codec typically supports 48000, 24000, 16000, 12000, or 8000 Hz.
         cmd = [
             "ffmpeg", "-i", source_file,
             "-y",
