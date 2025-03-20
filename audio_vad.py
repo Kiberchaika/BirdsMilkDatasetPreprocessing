@@ -10,7 +10,7 @@ def convert_to_wav(source_file):
     audio.export(wav_path, format='wav')
     return wav_path
 
-def detect_segments(source_file, min_silence_len=2000, silence_thresh=-40, keep_silence=500):
+def detect_segments(source_file, min_silence_len=500, silence_thresh=-40, keep_silence=500):
     """
     Detect non-silent segments in an audio file using librosa's RMSE-based detection.
     
@@ -93,11 +93,78 @@ def detect_segments(source_file, min_silence_len=2000, silence_thresh=-40, keep_
         timestamps = [(int(start * frame_time_ms), int(end * frame_time_ms))
                      for start, end in boundaries]
         
-        return timestamps
+        # Post process timestamps
+        processed_timestamps = post_process_timestamps(timestamps)
+        
+        return processed_timestamps
         
     except Exception as e:
         print(f"Error processing audio file: {str(e)}")
         return []
+
+def post_process_timestamps(timestamps, min_total_duration_ms=20000, max_gap_ms=1000):
+    """
+    Post-process the detected timestamps:
+    1. Join segments that are close to each other and would form segments
+       less than min_total_duration_ms when combined
+    
+    Parameters:
+    - timestamps: List of (start_time, end_time) tuples in milliseconds
+    - min_total_duration_ms: Minimum duration in ms for joined segments (default: 20000 ms = 20 sec)
+    - max_gap_ms: Maximum gap in ms between segments to consider joining (default: 1000 ms = 1 sec)
+    
+    Returns:
+    - Processed list of (start_time, end_time) tuples
+    """
+    if not timestamps:
+        return []
+    
+    # Sort timestamps by start time
+    sorted_timestamps = sorted(timestamps, key=lambda x: x[0])
+    
+    processed = []
+    current_group = [sorted_timestamps[0]]
+    
+    for i in range(1, len(sorted_timestamps)):
+        current_segment = sorted_timestamps[i]
+        last_segment = current_group[-1]
+        
+        gap = current_segment[0] - last_segment[1]
+        
+        # Calculate total duration of current group if we add this segment
+        start_time = current_group[0][0]
+        end_time = max(current_segment[1], current_group[-1][1])
+        total_duration = end_time - start_time
+        
+        # Join if gap is small enough and total duration would still be under threshold
+        if gap <= max_gap_ms and total_duration <= min_total_duration_ms:
+            current_group.append(current_segment)
+        else:
+            # Finalize the previous group
+            if len(current_group) > 1:
+                # Merge the group into a single segment
+                group_start = current_group[0][0]
+                group_end = max(seg[1] for seg in current_group)
+                processed.append((group_start, group_end))
+            else:
+                # Add the single segment
+                processed.append(current_group[0])
+            
+            # Start a new group
+            current_group = [current_segment]
+    
+    # Handle the last group
+    if current_group:
+        if len(current_group) > 1:
+            # Merge the group into a single segment
+            group_start = current_group[0][0]
+            group_end = max(seg[1] for seg in current_group)
+            processed.append((group_start, group_end))
+        else:
+            # Add the single segment
+            processed.append(current_group[0])
+    
+    return processed
 
 def extract_segments(source_file, segments, output_dir=None):
     """
