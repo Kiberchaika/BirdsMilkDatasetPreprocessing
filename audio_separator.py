@@ -219,38 +219,44 @@ def process_audio(model_info, audio_path, output_path, extract_instrumental=Fals
     
     return estimates
 
-def process_single_file(audio_path, postfix_vocal="vocal", postfix_vocal_dereverb="vocal_dereverb"):
+def process_single_file(audio_path, vocal_output, dereverb_output):
     """Process a single audio file for vocal extraction and de-reverberation.
     
     Args:
         audio_path (str): Path to the input audio file
-        postfix_vocal (str): Postfix to use for vocal extraction output (default: "vocal")
-        postfix_vocal_dereverb (str): Postfix to use for de-reverb output (default: "vocal_dereverb")
+        vocal_output (str): Path for the vocal extraction output (opus format)
+        dereverb_output (str): Path for the de-reverb output (opus format)
     """
-    output_dir = os.path.dirname(audio_path)
-    name = os.path.splitext(os.path.basename(audio_path))[0]
     start_time = time.time()
     
-    for stage, suffix in [('vocal', postfix_vocal), ('dereverb', postfix_vocal_dereverb)]:
-        temp_path = os.path.join(output_dir, f"{name}_{suffix}_temp.wav")
-        output_path = os.path.join(output_dir, f"{name}_{suffix}.mp3")
-        
-        process_audio(
-            MODELS[stage],
-            audio_path if stage == 'vocal' else output_path.replace(f"_{postfix_vocal_dereverb}", f"_{postfix_vocal}"),
-            temp_path,
-            extract_instrumental=False
-        )
-        
-        # Convert to MP3 format
-        subprocess.run(['ffmpeg', '-y', '-i', temp_path, '-codec:a', 'libmp3lame', '-qscale:a', '0', output_path], capture_output=True)
-        os.remove(temp_path)
-        
-        if stage == 'vocal':
-            audio_path = output_path
+    # Process vocal extraction
+    temp_vocal = vocal_output.replace('.opus', '_temp.wav')
+    process_audio(
+        MODELS['vocal'],
+        audio_path,
+        temp_vocal,
+        extract_instrumental=False
+    )
+    
+    # Convert vocal to opus format with high quality
+    subprocess.run(['ffmpeg', '-y', '-i', temp_vocal, '-c:a', 'libopus', '-b:a', '192k', vocal_output], capture_output=True)
+    os.remove(temp_vocal)
+    
+    # Process dereverb
+    temp_dereverb = dereverb_output.replace('.opus', '_temp.wav')
+    process_audio(
+        MODELS['dereverb'],
+        vocal_output,
+        temp_dereverb,
+        extract_instrumental=False
+    )
+    
+    # Convert dereverb to opus format with high quality
+    subprocess.run(['ffmpeg', '-y', '-i', temp_dereverb, '-c:a', 'libopus', '-b:a', '192k', dereverb_output], capture_output=True)
+    os.remove(temp_dereverb)
     
     logger.info(f"Time taken: {time.time() - start_time:.2f} seconds")
-    return output_path
+    return dereverb_output
 
 def main():
     parser = argparse.ArgumentParser(
@@ -309,6 +315,8 @@ def main():
         try:
             process_single_file(
                 audio_path,
+                os.path.join(os.path.dirname(audio_path), os.path.splitext(os.path.basename(audio_path))[0] + '_vocal.opus'),
+                os.path.join(os.path.dirname(audio_path), os.path.splitext(os.path.basename(audio_path))[0] + '_dereverb.opus')
             )
         except Exception as e:
             print(f"Error processing {os.path.basename(audio_path)}: {e}")
