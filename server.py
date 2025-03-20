@@ -10,6 +10,7 @@ from tqdm import tqdm
 import math
 import socket
 import mimetypes
+from text_compare import three_way_diff
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -40,6 +41,45 @@ def get_server_url():
     finally:
         s.close()
     return f"http://{actual_ip}:{PORT}"
+
+
+"""Process text differences and add HTML spans for highlighting."""
+def format_char(char, mark):
+    """Helper function to format a single character with appropriate styling."""
+    is_unique = mark != "123"
+    
+    if not is_unique:
+        if char == '\n':
+            return char + '<br>'
+        elif char == ' ':
+            return '&nbsp;'
+        else:
+            return char
+    
+    style_attr = ' style="background: #ffebee;"'
+    
+    if char == '\n':
+        return f'<span{style_attr}>{char}</span><br>'
+    elif char == ' ':
+        return f'<span{style_attr}>&nbsp;</span>'
+    else:
+        return f'<span{style_attr}>{char}</span>'
+
+# Process each text with its marks
+def process_char_marks(char_marks):
+    return ''.join(format_char(char, mark) for char, mark in char_marks)
+
+def highlight_diffs(text1, text2, text3):
+    char_marks1, char_marks2, char_marks3 = three_way_diff(text1, text2, text3)
+   
+    # Create HTML parts for each text
+    html_texts = [
+        process_char_marks(char_marks1),
+        process_char_marks(char_marks2),
+        process_char_marks(char_marks3)
+    ]
+    
+    return html_texts
 
 def initialize_dataset() -> None:
     """Initialize the blackbird dataset and scan for compositions."""
@@ -94,8 +134,9 @@ def initialize_dataset() -> None:
             vocal1_dereverb_path = os.path.join(dataset_path, track_dir, track_base + "_vocal1_dereverb.mp3")
             vocal2_path = os.path.join(dataset_path, track_dir, track_base + "_vocal2.mp3")
             vocal2_dereverb_path = os.path.join(dataset_path, track_dir, track_base + "_vocal2_dereverb.mp3")
+            vocal2_dereverb_json_path = os.path.join(dataset_path, track_dir, track_base + "_vocal2_dereverb.json")
             
-            if os.path.exists(main_track_path) and os.path.exists(vocal1_path) and os.path.exists(vocal1_dereverb_path) and os.path.exists(vocal2_path) and os.path.exists(vocal2_dereverb_path):
+            if os.path.exists(main_track_path) and os.path.exists(vocal1_path) and os.path.exists(vocal1_dereverb_path) and os.path.exists(vocal2_path) and os.path.exists(vocal2_dereverb_path) and os.path.exists(vocal2_dereverb_json_path):
                 composition["tracks"] = [
                     {
                         "title": "Main Track",
@@ -128,6 +169,50 @@ def initialize_dataset() -> None:
                         "markers": []
                     }
                 ]
+
+                # add markers from json
+                with open(vocal2_dereverb_json_path, 'r') as f:
+                    json_data = json.load(f)
+                
+                # Convert markers format
+                converted_markers = []
+                segments = []
+                if "segments" in json_data:
+                    for idx, segment in enumerate(json_data["segments"], 1):
+                        # Convert milliseconds to seconds
+                        start_sec = segment["start_ms"] / 1000
+                        end_sec = segment["end_ms"] / 1000
+                        
+                        phi4_text = segment.get("phi4_text", "")
+                        whisper3_text = segment.get("whisper3_text", "")
+                        nemo_text = segment.get("nemo_text", "")
+                        
+                        # process texts with highlighting
+                        phi4_text, whisper3_text, nemo_text = highlight_diffs(phi4_text, whisper3_text, nemo_text)
+                        
+                        marker = {
+                            "start": start_sec,
+                            "end": end_sec,
+                            "label": f"label_{idx}",
+                            "phi4_text": phi4_text,
+                            "whisper3_text": whisper3_text,
+                            "nemo_text": nemo_text,
+                        }
+                        
+                        converted_markers.append(marker)
+
+                        segment = {
+                            "label": f"label_{idx}",
+                            "phi4_text": phi4_text,
+                            "whisper3_text": whisper3_text,
+                            "nemo_text": nemo_text
+                        }
+
+                        segments.append(segment)
+                
+                composition["tracks"][4]["markers"] = converted_markers
+                composition["tracks"][4]["segments"] = segments
+
                 compositions_list.append(composition)
         
         compositions = compositions_list
@@ -249,6 +334,7 @@ def rescan():
 if __name__ == '__main__':
     # Initialize the dataset before starting the server
     initialize_dataset()
+
     # Start the server with threaded=True for better performance
     print(f"Starting server on http://{HOST}:{PORT}")
     print(f"You can access the server at http://localhost:{PORT} or http://<your-ip-address>:{PORT}")
