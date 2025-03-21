@@ -1,155 +1,150 @@
 import difflib
+import html
+from pathlib import Path
 
-def three_way_diff(text1, text2, text3):
+def get_diff(texts):
     """
-    Create a three-way diff showing matches and differences between characters.
-    Returns a list of tuples (char, texts_containing_char) for each text.
+    Create a multi-way diff showing matched and differing characters across all texts.
+    
+    Args:
+        texts: List of text strings to compare
+    
+    Returns:
+        List of lists, where each inner list contains tuples (char, texts_containing_char) for each text
     """
-    # Initialize character presence markers
-    # Initially, each character is marked as unique to its text
-    marks1 = ["1"] * len(text1)
-    marks2 = ["2"] * len(text2)
-    marks3 = ["3"] * len(text3)
+    # Validate input
+    if len(texts) < 2:
+        raise ValueError("At least 2 texts are needed for comparison")
     
-    # Create SequenceMatchers for pairs
-    sm12 = difflib.SequenceMatcher(None, text1, text2)
-    sm13 = difflib.SequenceMatcher(None, text1, text3)
-    sm23 = difflib.SequenceMatcher(None, text2, text3)
+    # Initialize result structure - for each text, create a list of (char, set of texts containing it)
+    result = []
     
-    # Process matching blocks between text1 and text2
-    for match in sm12.get_matching_blocks():
-        if match.size > 0:
-            for i in range(match.size):
-                a_idx = match.a + i
-                b_idx = match.b + i
-                
-                # If character in text1 is also in text3, mark as in all three
-                if "3" in marks1[a_idx]:
-                    marks1[a_idx] = "123"
-                    marks2[b_idx] = "123"
-                # Otherwise mark as shared between text1 and text2
-                else:
-                    marks1[a_idx] = "12"
-                    marks2[b_idx] = "12"
+    for i, main_text in enumerate(texts):
+        # For each character, track which texts contain it (starting with just the current text)
+        char_presence = [set([i+1]) for _ in range(len(main_text))]
+        
+        # Compare against all other texts
+        other_texts = [texts[j] for j in range(len(texts)) if j != i]
+        other_indices = [j+1 for j in range(len(texts)) if j != i]  # 1-based indices for other texts
+        
+        for j, other_text in enumerate(other_texts):
+            other_idx = other_indices[j]
+            matcher = difflib.SequenceMatcher(None, main_text, other_text)
+            
+            # Look for matching blocks (sequences that match between the texts)
+            for block in matcher.get_matching_blocks():
+                if block.size > 0:
+                    # For each matching character, add the other text's index to its presence set
+                    for k in range(block.size):
+                        idx_in_main = block.a + k
+                        if idx_in_main < len(char_presence):  # Safety check
+                            char_presence[idx_in_main].add(other_idx)
+        
+        # Convert presence sets to sorted strings (e.g., {1, 3} becomes "13")
+        presence_strings = [''.join(map(str, sorted(presence))) for presence in char_presence]
+        
+        # Create list of (char, presence) tuples for this text
+        text_result = list(zip(main_text, presence_strings))
+        result.append(text_result)
     
-    # Process matching blocks between text1 and text3
-    for match in sm13.get_matching_blocks():
-        if match.size > 0:
-            for i in range(match.size):
-                a_idx = match.a + i
-                c_idx = match.b + i
-                
-                # If character in text1 is also in text2, mark as in all three
-                if "2" in marks1[a_idx]:
-                    marks1[a_idx] = "123"
-                    marks3[c_idx] = "123"
-                # Otherwise mark as shared between text1 and text3
-                else:
-                    marks1[a_idx] = "13"
-                    marks3[c_idx] = "13"
-    
-    # Process matching blocks between text2 and text3
-    for match in sm23.get_matching_blocks():
-        if match.size > 0:
-            for i in range(match.size):
-                b_idx = match.a + i
-                c_idx = match.b + i
-                
-                # If character in text2 is also in text1, mark as in all three
-                if "1" in marks2[b_idx]:
-                    marks2[b_idx] = "123"
-                    marks3[c_idx] = "123"
-                # Otherwise mark as shared between text2 and text3
-                else:
-                    marks2[b_idx] = "23"
-                    marks3[c_idx] = "23"
-    
-    # Fix any inconsistencies
-    for marks, idx in [(marks1, 0), (marks2, 1), (marks3, 2)]:
-        for i in range(len(marks)):
-            # Sort the digits in each mark for consistency
-            marks[i] = ''.join(sorted(marks[i]))
-    
-    return list(zip(text1, marks1)), list(zip(text2, marks2)), list(zip(text3, marks3))
+    return result
 
-
-def generate_html(marks1, marks2, marks3, name1, name2, name3):
-    """Generate HTML output with highlighted differences in a three-column layout."""
+def generate_html_from_diff(diff_result, filenames=None, output_file='text_comparison.html'):
+    """
+    Generate HTML visualization from diff result.
+    
+    Args:
+        diff_result: Output from get_diff function
+        filenames: Optional list of names for each text
+        output_file: Output HTML file path. If None, returns HTML as string instead of writing to file
+    
+    Returns:
+        String: HTML content as string if output_file is None
+        None: Otherwise, saves the output to an HTML file
+    """
+    if filenames is None:
+        filenames = [f"Text {i+1}" for i in range(len(diff_result))]
+    
+    css = """
+    body { font-family: Arial, sans-serif; margin: 20px; max-width: 1200px; margin: 0 auto; }
+    .comparison-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-top: 20px; }
+    .comparison-cell { border: 1px solid #ddd; padding: 15px; border-radius: 5px; white-space: pre-wrap; word-break: break-word; }
+    .comparison-header { font-weight: bold; margin-bottom: 10px; background-color: #f0f0f0; padding: 5px; border-radius: 3px; text-align: center; }
+    .unique { background-color: #faa; }
+    .in-all { background-color: #afa; }
+    .shared { background-color: #aaf; }
+    """
+    
     html_parts = [
-        '<table style="width: 100%; border-collapse: collapse;">',
-        '<tr>'
+        "<!DOCTYPE html>",
+        "<html>",
+        "<head>",
+        "<meta charset='utf-8'>",
+        "<title>Text Comparison</title>",
+        f"<style>{css}</style>",
+        "</head>",
+        "<body>",
+        "<h1>Text Comparison</h1>"
     ]
     
-    def format_char(char, mark):
-        """Helper function to format a single character with appropriate styling."""
-        is_unique = mark != "123"
+    # Text comparison with highlights
+    html_parts.append("<div class='comparison-grid'>")
+    
+    num_texts = len(diff_result)
+    for i, text_result in enumerate(diff_result):
+        html_parts.append(f"<div class='comparison-cell'>")
+        html_parts.append(f"<div class='comparison-header'>{filenames[i]}</div>")
         
-        if not is_unique:
-            if char == '\n':
-                return char + '<br>'
-            elif char == ' ':
-                return '&nbsp;'
+        current_class = ""
+        current_text = ""
+        html_content = []
+        
+        for char, presence in text_result:
+            # Determine the class based on presence
+            if len(presence) == 1:
+                new_class = "unique"  # Unique to this text
+            elif len(presence) == num_texts:
+                new_class = "in-all"  # Present in all texts
             else:
-                return char
+                new_class = "shared"  # Shared with some but not all
+            
+            if new_class != current_class:
+                if current_text:
+                    html_content.append(f'<span class="{current_class}">{html.escape(current_text)}</span>')
+                    current_text = ""
+                current_class = new_class
+            
+            current_text += char
         
-        style_attr = ' style="background: #ffebee;"'
+        # Add the last segment
+        if current_text:
+            html_content.append(f'<span class="{current_class}">{html.escape(current_text)}</span>')
         
-        if char == '\n':
-            return f'<span{style_attr}>{char}</span><br>'
-        elif char == ' ':
-            return f'<span{style_attr}>&nbsp;</span>'
-        else:
-            return f'<span{style_attr}>{char}</span>'
+        html_parts.append("".join(html_content))
+        html_parts.append("</div>")
     
-    # Process each text block in columns
-    for char_marks, name in [(marks1, name1), (marks2, name2), (marks3, name3)]:
-        html_parts.extend([
-            '<td style="vertical-align: top; padding: 10px; word-break: break-word; width: 33.3%;">',
-            f"<h3>{name}</h3>",
-            '<br/>',
-            ''.join(format_char(char, mark) for char, mark in char_marks),
-            '</td>'
-        ])
+    html_parts.append("</div>")
+    html_parts.append("</body></html>")
     
-    html_parts.extend([
-        '</tr>',
-        '</table>',
-    ])
+    # Join all HTML parts into a single string
+    html_content = "\n".join(html_parts)
     
-    return "\n".join(html_parts)
-
-
-def main():
-    # Example texts
-    text1 = """This is the first text.
-It has multiple lines.
-This line is the same in all texts.
-This line is different in text 1."""
-
-    text2 = """This is the second text.
-It has multiple lines.
-This line is the same in all texts.
-This line is different in text 2.
-Text 2 has an extra line."""
-
-    text3 = """This is the third text.
-It also has multiple lines.
-This line is the same in all texts.
-This line is unique to text 3.
-Text 3 also has an extra line."""
-
-    # Get character-level differences
-    marks1, marks2, marks3 = three_way_diff(text1, text2, text3)
+    # If output_file is None, return the HTML content as string
+    if output_file is None:
+        return html_content
     
-    # Generate and save HTML output
-    name1 = "Base"
-    name2 = "Version 2"
-    name3 = "Version 3"
-    html_content = generate_html(marks1, marks2, marks3, name1, name2, name3)
-    output_filename = "diff_result.html"
-    with open(output_filename, "w") as f:
+    # Otherwise write to file
+    with open(output_file, 'w', encoding='utf-8') as f:
         f.write(html_content)
-    print(f"\nHTML comparison saved to {output_filename}")
+    print(f"Comparison saved to: {output_file}")
 
+# Example usage
 if __name__ == "__main__":
-    main()
+    example_texts = [
+        "This is the first text for comparison. It contains some unique parts.",
+        "This is the second text for comparison. It has differences from the first.",
+        "This is the third text for comparison. It also has unique elements."
+    ]
+    
+    diff_result = get_diff(example_texts)
+    generate_html_from_diff(diff_result, output_file="comparison_result.html")

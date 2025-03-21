@@ -10,7 +10,7 @@ from tqdm import tqdm
 import math
 import socket
 import mimetypes
-from text_compare import three_way_diff
+from text_compare import get_diff
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -44,40 +44,36 @@ def get_server_url():
 
 
 """Process text differences and add HTML spans for highlighting."""
-def format_char(char, mark):
-    """Helper function to format a single character with appropriate styling."""
-    is_unique = mark != "123"
-    
-    if not is_unique:
-        if char == '\n':
-            return char + '<br>'
-        elif char == ' ':
-            return '&nbsp;'
-        else:
-            return char
-    
-    style_attr = ' style="background: #ffebee;"'
-    
-    if char == '\n':
-        return f'<span{style_attr}>{char}</span><br>'
-    elif char == ' ':
-        return f'<span{style_attr}>&nbsp;</span>'
-    else:
-        return f'<span{style_attr}>{char}</span>'
-
-# Process each text with its marks
-def process_char_marks(char_marks):
-    return ''.join(format_char(char, mark) for char, mark in char_marks)
-
 def highlight_diffs(text1, text2, text3):
-    char_marks1, char_marks2, char_marks3 = three_way_diff(text1, text2, text3)
-   
-    # Create HTML parts for each text
-    html_texts = [
-        process_char_marks(char_marks1),
-        process_char_marks(char_marks2),
-        process_char_marks(char_marks3)
-    ]
+    # Use get_diff which takes a list of texts
+    diff_result = get_diff([text1, text2, text3])
+    
+    # Process each text's diff results
+    html_texts = []
+    
+    for text_result in diff_result:
+        processed_text = []
+        for char, presence in text_result:
+            is_unique = len(presence) == 1  # Unique to this text if only present in one text
+            
+            if not is_unique:
+                if char == '\n':
+                    processed_text.append(char + '<br>')
+                elif char == ' ':
+                    processed_text.append('&nbsp;')
+                else:
+                    processed_text.append(char)
+            else:
+                style_attr = ' style="background: #ffebee;"'
+                
+                if char == '\n':
+                    processed_text.append(f'<span{style_attr}>{char}</span><br>')
+                elif char == ' ':
+                    processed_text.append(f'<span{style_attr}>&nbsp;</span>')
+                else:
+                    processed_text.append(f'<span{style_attr}>{char}</span>')
+        
+        html_texts.append(''.join(processed_text))
     
     return html_texts
 

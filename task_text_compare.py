@@ -6,7 +6,7 @@ from audio_vad import detect_segments
 from asr_phi4 import transcribe_using_phi4
 from asr_whisper3 import transcribe_using_whisper3
 from asr_nemo_canary import transcribe_using_nemo_canary
-from text_compare import three_way_diff, generate_html
+from text_compare import get_diff, generate_html_from_diff
 from tqdm import tqdm
 
 """
@@ -102,9 +102,13 @@ def process_audio_segments(source_file):
         }
         json_data["segments"].append(segment_data)
         
-        # Generate three-way diff and HTML comparison
-        marks1, marks2, marks3 = three_way_diff(phi4_text, whisper3_text, nemo_text)
-        comparison_html = generate_html(marks1, marks2, marks3, "Phi-4", "Whisper-3", "Nemo Canary")
+        # Generate comparison using get_diff and generate_html_from_diff
+        diff_result = get_diff([phi4_text, whisper3_text, nemo_text])
+        comparison_html = generate_html_from_diff(
+            diff_result, 
+            filenames=["Phi-4", "Whisper-3", "Nemo Canary"],
+            output_file=None  # Don't write to file, just return HTML
+        )
         
         # Add segment header and wrap comparison in segment div
         segment_html = [
