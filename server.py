@@ -101,11 +101,13 @@ def initialize_dataset() -> None:
         
         # Group tracks by album with progress bar
         albums = {}
-        for track_path in tqdm(tracks, desc="Grouping tracks by album"):
-            album_path = os.path.dirname(track_path)
-            if album_path not in albums:
-                albums[album_path] = []
-            albums[album_path].append(track_path)
+        for track_name, track_paths in tqdm(tracks.items(), desc="Grouping tracks by album"):
+            for track_path in track_paths:
+                track_path = os.path.relpath(track_path, dataset_path)
+                album_path = os.path.dirname(track_path)
+                if album_path not in albums:
+                    albums[album_path] = []
+                albums[album_path].append(str(track_path))
         
         # Convert albums to compositions format
         compositions_list = []
@@ -116,8 +118,8 @@ def initialize_dataset() -> None:
             # Process first track from album
             track_path = album_tracks[0]
             track_dir = os.path.dirname(track_path)
-            track_base = os.path.basename(track_path)
-            
+            track_base = os.path.splitext(os.path.basename(track_path))[0]
+
             # Extract group name and track name
             group_name = os.path.basename(os.path.dirname(album_path))
             track_name = track_base
@@ -332,10 +334,14 @@ def rescan():
         }), 500
 
 if __name__ == '__main__':
-    # Initialize the dataset before starting the server
-    initialize_dataset()
-
+    # Only initialize the dataset in the main process when in debug mode
+    # When debug=True, Flask spawns a reloader process that would cause the initialization to run twice
+    if not os.environ.get('WERKZEUG_RUN_MAIN'):
+        print(f"Starting server on http://{HOST}:{PORT}")
+        print(f"You can access the server at http://localhost:{PORT} or http://<your-ip-address>:{PORT}")
+    else:
+        # Initialize only in the main process
+        initialize_dataset()
+    
     # Start the server with threaded=True for better performance
-    print(f"Starting server on http://{HOST}:{PORT}")
-    print(f"You can access the server at http://localhost:{PORT} or http://<your-ip-address>:{PORT}")
     app.run(host=HOST, port=PORT, debug=True, threaded=True) 
