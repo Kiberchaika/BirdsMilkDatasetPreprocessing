@@ -45,6 +45,22 @@ roots = [
     },
 ]
 
+#'''
+roots = [
+    {
+        'path': '/media/k4_nas/disk2/Music_Part2',
+        'required_length': 2,  # Structure: artist/album, нет жанров
+    },
+    {
+        'path': '/media/k4_nas/disk1/Datasets/Music_Part1',
+        'required_length': 2,  # Structure: artist/album, нет жанров
+    },
+    
+]
+#'''
+
+
+
 def count_dirs_at_depth(path, target_depth, current_depth=0):
     """Count number of directories exactly at the target depth"""
     if current_depth > target_depth:
