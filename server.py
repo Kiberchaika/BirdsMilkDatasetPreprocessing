@@ -81,7 +81,7 @@ def initialize_dataset() -> None:
     """Initialize the blackbird dataset and scan for compositions."""
     global dataset, compositions
     try:
-        dataset_path = Path("/media/k4_nas/disk1/Datasets/Music/FUNK")
+        dataset_path = Path("/media/k4_nas/disk1/Datasets/Music_Part1")
         logger.info(f"Initializing dataset at {dataset_path}")
         dataset = Dataset(dataset_path)
         
