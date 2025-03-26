@@ -10,6 +10,7 @@ USERNAME = 'webdavuser'
 PASSWORD = 'webdavpassword'
 TARGET_DIR = '/media/k4_nas/disk2/Music'
 THREADS = 10
+SKIP_FOLDER_LEVELS = 0  # Number of folder levels to skip when saving files (data/genre)
 
 '''
 sudo apt install apache2 apache2-utils
@@ -207,8 +208,14 @@ print(f"Найдено файлов: {total_files}")
 # Подготовка списка задач
 download_tasks = []
 for remote_file in all_files:
-    # Создаем корректный локальный путь
-    local_file = os.path.join(TARGET_DIR, remote_file.lstrip('/'))
+    # Create local path by skipping N folder levels
+    path_parts = remote_file.lstrip('/').split('/')
+    if len(path_parts) > SKIP_FOLDER_LEVELS:
+        local_path = '/'.join(path_parts[SKIP_FOLDER_LEVELS:])
+    else:
+        local_path = '/'.join(path_parts)
+    
+    local_file = os.path.join(TARGET_DIR, local_path)
     os.makedirs(os.path.dirname(local_file), exist_ok=True)
     download_tasks.append((remote_file, local_file))
 
