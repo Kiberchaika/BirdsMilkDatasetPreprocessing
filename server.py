@@ -257,7 +257,7 @@ def get_composition(composition_id):
 
 @app.route('/audio/<path:filename>')
 def serve_audio(filename):
-    dataset_path = Path("/media/k4_nas/disk1/Datasets/Music/FUNK")
+    dataset_path = Path("/media/k4_nas/disk1/Datasets/Music_Part1")
     file_path = os.path.join(dataset_path, filename)
     
     if not os.path.exists(file_path):

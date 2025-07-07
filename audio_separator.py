@@ -167,6 +167,14 @@ def process_audio(model_info, audio_path, output_path, extract_instrumental=Fals
         if 'num_channels' in config.audio:
             if config.audio['num_channels'] == 2:
                 mix = np.concatenate([mix, mix], axis=0)
+
+    elif len(mix.shape) == 2 and mix.shape[0]>1: # Stereo
+        mix = np.mean(mix, 0 , keepdims = True)
+        if 'num_channels' in config.audio:
+            if config.audio['num_channels'] == 2:
+                mix = np.concatenate([mix, mix], axis=0)
+
+        
     
     # Store original mix for later use
     mix_orig = mix.copy()
@@ -313,11 +321,14 @@ def main():
     print(f"Processing {len(opus_files)} files...")
     for audio_path in tqdm(opus_files):
         try:
+            vocal_output = os.path.join(os.path.dirname(audio_path), os.path.splitext(os.path.basename(audio_path))[0] + '_vocal.opus')
+            dereverb_output = os.path.join(os.path.dirname(audio_path), os.path.splitext(os.path.basename(audio_path))[0] + '_dereverb.opus')
             process_single_file(
                 audio_path,
-                os.path.join(os.path.dirname(audio_path), os.path.splitext(os.path.basename(audio_path))[0] + '_vocal.opus'),
-                os.path.join(os.path.dirname(audio_path), os.path.splitext(os.path.basename(audio_path))[0] + '_dereverb.opus')
+                vocal_output,
+                dereverb_output
             )
+            os.remove(vocal_output)
         except Exception as e:
             print(f"Error processing {os.path.basename(audio_path)}: {e}")
     
