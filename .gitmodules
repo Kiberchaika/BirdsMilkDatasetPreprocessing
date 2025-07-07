@@ -4,3 +4,6 @@
 [submodule "Music-Source-Separation-Training"]
 	path = Music-Source-Separation-Training
 	url = https://github.com/jarredou/Music-Source-Separation-Training
+[submodule "RMVPE"]
+	path = RMVPE
+	url = https://github.com/yxlllc/RMVPE
