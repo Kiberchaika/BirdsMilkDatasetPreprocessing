@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import os
+import gc
 import sys
 import logging
 import torch
@@ -35,7 +36,7 @@ def process_track(track_path: str) -> None:
         # Skip if vocal and dereverb files exist
         if os.path.exists(vocal_output) and os.path.exists(dereverb_output):
             logger.info(f"Vocal and dereverb files already exist for {track_base}, skipping...")
-            return
+            #return
         
         # Source file is the input track path
         source_file = track_path
@@ -116,7 +117,7 @@ def main():
     print("All Artists:")
     
     # Get first 100 artists
-    artists_to_process = list(stats["artists"])[:200]
+    artists_to_process = list(stats["artists"])[:40]
     logger.info(f"\nProcessing first {len(artists_to_process)} artists")
     
     # Track all tracks to process
@@ -124,6 +125,10 @@ def main():
     
     # Collect tracks for first 100 artists
     for artist in artists_to_process:
+        # clear gpu  
+        torch.cuda.empty_cache()
+        gc.collect()
+
         # Print albums for this artist
         albums = stats["albums"][artist]
         for album in albums:

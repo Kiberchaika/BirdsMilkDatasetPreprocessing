@@ -1,9 +1,9 @@
 [submodule "The_Blackbird_Dataset"]
 	path = The_Blackbird_Dataset
 	url = https://github.com/Kiberchaika/The_Blackbird_Dataset
-[submodule "Music-Source-Separation-Training"]
-	path = Music-Source-Separation-Training
-	url = https://github.com/jarredou/Music-Source-Separation-Training
 [submodule "RMVPE"]
 	path = RMVPE
 	url = https://github.com/yxlllc/RMVPE
+[submodule "Music-Source-Separation-Training"]
+	path = Music-Source-Separation-Training
+	url = https://github.com/ZFTurbo/Music-Source-Separation-Training.git

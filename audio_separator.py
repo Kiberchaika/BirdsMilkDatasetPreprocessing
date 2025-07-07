@@ -26,7 +26,8 @@ import shlex
 # Add current directory to path for imports
 sys.path.append('./Music-Source-Separation-Training')
 
-from utils import get_model_from_config, demix
+from utils.settings import get_model_from_config
+from utils.model_utils import demix
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -250,10 +251,10 @@ def process_single_file(audio_path, vocal_output, dereverb_output):
     # Convert vocal to opus format with high quality
     subprocess.run([
         'ffmpeg', '-y',
-        '-i', shlex.quote(temp_vocal),
+        '-i', temp_vocal,
         '-c:a', 'libopus',
         '-b:a', '192k',
-        shlex.quote(vocal_output)
+        vocal_output
     ], capture_output=True)
     os.remove(temp_vocal)
     
@@ -269,10 +270,10 @@ def process_single_file(audio_path, vocal_output, dereverb_output):
     # Convert dereverb to opus format with high quality
     subprocess.run([
         'ffmpeg', '-y',
-        '-i', shlex.quote(temp_dereverb),
+        '-i', temp_dereverb,
         '-c:a', 'libopus',
         '-b:a', '192k',
-        shlex.quote(dereverb_output)
+        dereverb_output
     ], capture_output=True)
     os.remove(temp_dereverb)
     
