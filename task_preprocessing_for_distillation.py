@@ -125,9 +125,6 @@ def main():
     
     # Collect tracks for first 100 artists
     for artist in artists_to_process:
-        # clear gpu  
-        torch.cuda.empty_cache()
-        gc.collect()
 
         # Print albums for this artist
         albums = stats["albums"][artist]
@@ -148,6 +145,10 @@ def main():
     
     # Process all tracks
     for track_path in tqdm(tracks_to_process, desc="Processing tracks"):
+        # clear gpu  
+        torch.cuda.empty_cache()
+        gc.collect()
+
         #logger.info(f"Processing track: {track_path}")
         process_track(track_path)
 
