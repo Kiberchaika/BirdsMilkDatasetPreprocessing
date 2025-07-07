@@ -32,9 +32,9 @@ def process_track(track_path: str) -> None:
         dereverb_output = os.path.join(track_dir, track_name + "_dereverb.opus")
         pitch_output = os.path.join(track_dir, track_name + "_pitch.pt")
         
-        # Skip if all files exist
-        if os.path.exists(vocal_output) and os.path.exists(dereverb_output) and os.path.exists(pitch_output):
-            logger.info(f"All files already exist for {track_base}, skipping...")
+        # Skip if vocal and dereverb files exist
+        if os.path.exists(vocal_output) and os.path.exists(dereverb_output):
+            logger.info(f"Vocal and dereverb files already exist for {track_base}, skipping...")
             return
         
         # Source file is the input track path
@@ -46,8 +46,9 @@ def process_track(track_path: str) -> None:
             return
         
         # Step 1: Process audio separation
-        logger.info(f"Processing file: {source_file}")
+        #logger.info(f"Processing file: {source_file}")
         process_single_file(source_file, vocal_output=vocal_output, dereverb_output=dereverb_output)
+        os.remove(vocal_output)
         
         # Step 2: Extract pitch from dereverb output
         if os.path.exists(dereverb_output) and not os.path.exists(pitch_output):
@@ -115,7 +116,7 @@ def main():
     print("All Artists:")
     
     # Get first 100 artists
-    artists_to_process = list(stats["artists"])[:100]
+    artists_to_process = list(stats["artists"])[:200]
     logger.info(f"\nProcessing first {len(artists_to_process)} artists")
     
     # Track all tracks to process
@@ -142,7 +143,7 @@ def main():
     
     # Process all tracks
     for track_path in tqdm(tracks_to_process, desc="Processing tracks"):
-        logger.info(f"Processing track: {track_path}")
+        #logger.info(f"Processing track: {track_path}")
         process_track(track_path)
 
     logger.info("\nProcessing completed!")

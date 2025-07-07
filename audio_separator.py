@@ -21,6 +21,7 @@ from urllib.parse import quote
 import warnings
 import subprocess
 import logging
+import shlex 
 
 # Add current directory to path for imports
 sys.path.append('./Music-Source-Separation-Training')
@@ -247,7 +248,13 @@ def process_single_file(audio_path, vocal_output, dereverb_output):
     )
     
     # Convert vocal to opus format with high quality
-    subprocess.run(['ffmpeg', '-y', '-i', temp_vocal, '-c:a', 'libopus', '-b:a', '192k', vocal_output], capture_output=True)
+    subprocess.run([
+        'ffmpeg', '-y',
+        '-i', shlex.quote(temp_vocal),
+        '-c:a', 'libopus',
+        '-b:a', '192k',
+        shlex.quote(vocal_output)
+    ], capture_output=True)
     os.remove(temp_vocal)
     
     # Process dereverb
@@ -260,7 +267,13 @@ def process_single_file(audio_path, vocal_output, dereverb_output):
     )
     
     # Convert dereverb to opus format with high quality
-    subprocess.run(['ffmpeg', '-y', '-i', temp_dereverb, '-c:a', 'libopus', '-b:a', '192k', dereverb_output], capture_output=True)
+    subprocess.run([
+        'ffmpeg', '-y',
+        '-i', shlex.quote(temp_dereverb),
+        '-c:a', 'libopus',
+        '-b:a', '192k',
+        shlex.quote(dereverb_output)
+    ], capture_output=True)
     os.remove(temp_dereverb)
     
     logger.info(f"Time taken: {time.time() - start_time:.2f} seconds")
