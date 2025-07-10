@@ -222,6 +222,12 @@ def process_audio(model_info, audio_path, output_path, extract_instrumental=Fals
     if output_path:
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         try:
+            # create empty file if it doesn't exist
+            if not os.path.exists(output_path):
+                with open(output_path, 'w') as f:
+                    f.write('')
+            # sleep for 1 second
+            time.sleep(1)
             sf.write(output_path, estimates.T, sample_rate, subtype='PCM_24')
         except Exception as e:
             logger.error(f"Error saving output file: {e}")
