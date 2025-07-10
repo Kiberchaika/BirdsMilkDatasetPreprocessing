@@ -2,6 +2,9 @@
 # coding: utf-8
 
 import os
+# Set CUDA to only use GPU 1
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
 import gc
 import sys
 import logging
@@ -13,8 +16,6 @@ from audio_separator import setup_models as setup_separator_models, process_sing
 from audio_pitch_rmvpe import setup_models as setup_rmvpe_models, extract_pitch
 from tqdm import tqdm
 
-# Set CUDA to only use GPU 1
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -116,14 +117,14 @@ def main():
     # Print all artists
     print("All Artists:")
     
-    # Get first 100 artists
-    artists_to_process = list(stats["artists"])[:40]
+    # Get first 400 artists
+    artists_to_process = list(sorted(stats["artists"]))[:400]
     logger.info(f"\nProcessing first {len(artists_to_process)} artists")
     
     # Track all tracks to process
     tracks_to_process = []
     
-    # Collect tracks for first 100 artists
+    # Collect tracks 
     for artist in artists_to_process:
 
         # Print albums for this artist
